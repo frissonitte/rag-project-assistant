@@ -1,6 +1,17 @@
-# FRISSONITTE RAG Chatbot
+# frissonitte's rag project assistant
 
 A local RAG (Retrieval-Augmented Generation) chatbot for querying personal project documentation. Built to replace hallucination-prone LLM responses with grounded answers extracted from actual project source code and documentation.
+
+**Current state:** Local terminal application (Ollama). Planned migration to a public-facing web service — see [Roadmap](#roadmap).
+
+## Roadmap
+
+- [ ] Replace Ollama with Groq API (Llama 3.3 70B) for cloud inference
+- [ ] Expose `/chat` POST endpoint via FastAPI
+- [ ] Add IP-based rate limiting (`slowapi`)
+- [ ] Deploy backend to Render (free tier)
+- [ ] Build vanilla JS chat widget for portfolio site integration
+- [ ] Embed widget into [emirhanyildirim.me](https://emirhanyildirim.me) (Jekyll / GitHub Pages)
 
 ## Architecture
 
@@ -61,6 +72,8 @@ Rules:
 5. Be concise and precise. Answer in the same language as the question.
 ```
 
+Rule 2 uses a fixed Turkish phrase to make refuses unambiguous and testable.
+
 ## Knowledge Base Design
 
 Two source types with different roles:
@@ -106,7 +119,7 @@ python rag_chatbot.py
 ## Projects Covered
 
 - **WBC Analyzer** — DenseNet121-based WBC classification with OOD adaptation pipeline
-- **Scalable Kinematic Action Recognition for Industry 5.0** — End-to-end action recognition on 10GB motion-capture data with streaming drift detection
+- **Kinematic** — End-to-end action recognition on 10GB motion-capture data with streaming drift detection
 - **Listing Pilot** — Appium automation suite for C2C marketplace listing management
 - **Popcorn Wagon** — Hybrid movie recommender (SVD + Annoy + TMDB)
 - **Portal Cleaner Ultimate** — RPA desktop suite for ERP workflow automation

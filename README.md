@@ -1,0 +1,112 @@
+# FRISSONITTE RAG Chatbot
+
+A local RAG (Retrieval-Augmented Generation) chatbot for querying personal project documentation. Built to replace hallucination-prone LLM responses with grounded answers extracted from actual project source code and documentation.
+
+## Architecture
+
+```
+documents/               ← prepared knowledge base
+    ├── *_README.md      ← project README files
+    ├── *_code_context.txt  ← AST-extracted code structure
+    └── *_highlights.txt ← curated project summaries & rationale
+
+prepare_docs.py          ← knowledge base builder
+rag_chatbot.py           ← retrieval + generation pipeline
+chroma_db/               ← persistent vector index
+```
+
+**Pipeline:**
+
+1. `prepare_docs.py` extracts structured context from each project
+2. Chunks are embedded with `all-MiniLM-L6-v2` and stored in ChromaDB
+3. At query time: project keyword detection → metadata-filtered retrieval → Ollama generation with strict grounding prompt
+
+## Document Extraction (`prepare_docs.py`)
+
+Uses Python `ast` module (not regex) to extract per-file:
+
+- Module, class, and function docstrings
+- Function signatures with type annotations and return types
+- `ALL_CAPS` module-level constants (configuration values)
+- Inline comments
+- `README.md` and `highlights.txt` copied as-is
+
+Regex-based extraction was discarded because it misattributed multi-line string literals as docstrings and could not reconstruct function signatures reliably.
+
+## Retrieval Design
+
+**Embedding model:** `sentence-transformers/all-MiniLM-L6-v2`  
+**Vector store:** ChromaDB (persistent, SQLite-backed)  
+**Chunk size:** 200 words, 40-word overlap
+
+**Similarity threshold:** L2 distance < 1.40 passes; above this a low-confidence warning is shown and the LLM is still invoked but the user is alerted. Threshold was calibrated empirically: `all-MiniLM-L6-v2` L2 distances in the 1.0–1.3 range correspond to topically related but not directly answering chunks; distances above 1.5 are typically off-topic.
+
+**Project-scoped metadata filtering:** Each chunk is indexed with a `project` metadata field derived from its filename prefix. When a query mentions a known project by name or keyword, ChromaDB's `$eq` filter restricts retrieval to that project's chunks only. Without this, semantically similar chunks from other projects contaminate the context — e.g. a question about Listing Pilot's Telegram integration would retrieve WBC Analyzer's GPT-4o API discussion because both involve external API calls.
+
+Fallback: if the filtered query returns no results (project has few chunks), the filter is dropped and a full-corpus search runs.
+
+## Generation Prompt
+
+```
+You are an assistant that answers questions about the developer's own projects.
+The context below comes from that project's documentation and source code.
+Rules:
+1. Answer using information present in the context, including reasonable direct
+   inferences (e.g. if a table lists architectures tested, you can state which
+   ones were used).
+2. If the context genuinely contains no relevant information, say exactly:
+   'Bu bilgi projelerimde mevcut değil.' and stop.
+3. Do not invent facts not supported by the context.
+4. Mention which project or file the information comes from.
+5. Be concise and precise. Answer in the same language as the question.
+```
+
+## Knowledge Base Design
+
+Two source types with different roles:
+
+| Source              | Content                                                | Answers                                      |
+| ------------------- | ------------------------------------------------------ | -------------------------------------------- |
+| `_code_context.txt` | AST-extracted signatures, docstrings, constants        | Implementation questions ("how does X work") |
+| `_highlights.txt`   | Curated summaries, design rationale, known limitations | Motivation questions ("why was X chosen")    |
+
+`_highlights.txt` is hand-written per project. This is intentional: motivation and architectural decisions are rarely in source code comments. The system is a hybrid — automatic extraction for structure, curated content for rationale. This distinction matters: the system does not "understand" code; it retrieves the most relevant pre-extracted or pre-written text and grounds the LLM's response to it.
+
+## Known Limitations
+
+**Source attribution errors at chunk boundaries:** The LLM sometimes names the wrong file as the source when the relevant information spans a chunk boundary. The chunk metadata records the source file, but a function defined in `utils.py` may appear in a chunk whose surrounding text is from a runner script. Not critical for Q&A accuracy but worth noting if precise attribution is required.
+
+**Keyword-based project detection:** Project filtering relies on a static keyword list. Misspelled project names or paraphrased references are not caught. A more robust approach would use semantic similarity against project name embeddings, but the current approach is sufficient for the intended use case.
+
+**Local inference only:** Generation requires Ollama running locally. If Ollama is offline, the chatbot falls back to displaying retrieved chunks without generation.
+
+## Setup
+
+```bash
+pip install chromadb sentence-transformers rich requests
+
+# Build knowledge base
+python prepare_docs.py
+
+# Start chatbot (requires Ollama with a model pulled)
+python rag_chatbot.py
+```
+
+**Ollama model:** Default is `qwen3:14b`. Falls back to any available Qwen or Llama model.
+
+## Commands
+
+| Command    | Description                                               |
+| ---------- | --------------------------------------------------------- |
+| `/reindex` | Rebuild ChromaDB index from current `documents/` contents |
+| `/info`    | Show active model, index size, Ollama status              |
+| `/help`    | List commands                                             |
+| `/exit`    | Quit                                                      |
+
+## Projects Covered
+
+- **WBC Analyzer** — DenseNet121-based WBC classification with OOD adaptation pipeline
+- **Scalable Kinematic Action Recognition for Industry 5.0** — End-to-end action recognition on 10GB motion-capture data with streaming drift detection
+- **Listing Pilot** — Appium automation suite for C2C marketplace listing management
+- **Popcorn Wagon** — Hybrid movie recommender (SVD + Annoy + TMDB)
+- **Portal Cleaner Ultimate** — RPA desktop suite for ERP workflow automation

@@ -68,7 +68,7 @@ Rules:
    inferences (e.g. if a table lists architectures tested, you can state which
    ones were used).
 2. If the context genuinely contains no relevant information, say exactly:
-   'Bu bilgi projelerimde mevcut değil.' and stop.
+   'I don't have this information.' and stop.
 3. Do not invent facts not supported by the context.
 4. Mention which project or file the information comes from.
 5. Be concise and precise. Answer in the same language as the question.

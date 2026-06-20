@@ -1,4 +1,5 @@
-![alt text](static/interface.png)
+![RAG pipeline illustration](static/thumbnail.png)
+_Conceptual illustration — see [Demo](#demo) below for the actual terminal interface._
 
 # frissonitte's rag project assistant
 
@@ -14,6 +15,11 @@ A local RAG (Retrieval-Augmented Generation) chatbot for querying personal proje
 - [ ] Deploy backend to Render (free tier)
 - [ ] Build vanilla JS chat widget for portfolio site integration
 - [ ] Embed widget into [emirhanyildirim.me](https://emirhanyildirim.me) (Jekyll / GitHub Pages)
+
+## Demo
+
+![Actual terminal interface](static/interface.png)
+_Real terminal output: retrieved chunks with similarity scores, project filtering, and grounded answer generation._
 
 ## Architecture
 
@@ -73,8 +79,6 @@ Rules:
 4. Mention which project or file the information comes from.
 5. Be concise and precise. Answer in the same language as the question.
 ```
-
-Rule 2 uses a fixed Turkish phrase to make refuses unambiguous and testable.
 
 ## Knowledge Base Design
 

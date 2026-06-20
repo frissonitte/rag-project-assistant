@@ -1,3 +1,5 @@
+![alt text](image.png)
+
 # frissonitte's rag project assistant
 
 A local RAG (Retrieval-Augmented Generation) chatbot for querying personal project documentation. Built to replace hallucination-prone LLM responses with grounded answers extracted from actual project source code and documentation.
@@ -96,7 +98,7 @@ Two source types with different roles:
 ## Setup
 
 ```bash
-pip install chromadb sentence-transformers rich requests
+pip install -r requirements.txt
 
 # Build knowledge base
 python prepare_docs.py
@@ -119,7 +121,7 @@ python rag_chatbot.py
 ## Projects Covered
 
 - **WBC Analyzer** — DenseNet121-based WBC classification with OOD adaptation pipeline
-- **Kinematic** — End-to-end action recognition on 10GB motion-capture data with streaming drift detection
+- **Scalable Kinematic Action Recognition for Industry 5.0** — End-to-end action recognition on 10GB motion-capture data with streaming drift detection
 - **Listing Pilot** — Appium automation suite for C2C marketplace listing management
 - **Popcorn Wagon** — Hybrid movie recommender (SVD + Annoy + TMDB)
 - **Portal Cleaner Ultimate** — RPA desktop suite for ERP workflow automation

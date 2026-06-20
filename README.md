@@ -1,4 +1,4 @@
-![alt text](image.png)
+![alt text](static/interface.png)
 
 # frissonitte's rag project assistant
 

@@ -187,6 +187,12 @@ def main():
         else:
             print(f"  Warning: README.md not found in {project_path}")
 
+        highlights_path = os.path.join(project_path, "highlights.txt")
+        if os.path.exists(highlights_path):
+            target_highlights = os.path.join(DOCS_DIR, f"{folder_name}_highlights.txt")
+            shutil.copy2(highlights_path, target_highlights)
+            print(f"  Copied highlights to {target_highlights}")
+
         project_sections: list[str] = []
         for root, dirs, files in os.walk(project_path):
             dirs[:] = [d for d in dirs if d not in _SKIP_DIRS]

@@ -5,12 +5,12 @@ _Conceptual illustration — see [Demo](#demo) below for the actual terminal int
 
 A local RAG (Retrieval-Augmented Generation) chatbot for querying personal project documentation. Built to replace hallucination-prone LLM responses with grounded answers extracted from actual project source code and documentation.
 
-**Current state:** Local terminal application (Ollama). Planned migration to a public-facing web service — see [Roadmap](#roadmap).
+**Current state:** FastAPI backend with Groq inference (Llama 3.3 70B). CLI mode still available locally. Planned deployment as a public-facing web service — see [Roadmap](#roadmap).
 
 ## Roadmap
 
-- [ ] Replace Ollama with Groq API (Llama 3.3 70B) for cloud inference
-- [ ] Expose `/chat` POST endpoint via FastAPI
+- [x] Replace Ollama with Groq API (Llama 3.3 70B) for cloud inference
+- [x] Expose `/chat` POST endpoint via FastAPI
 - [ ] Add IP-based rate limiting (`slowapi`)
 - [ ] Deploy backend to Hugging Face Spaces (Docker SDK)
 - [ ] Build vanilla JS chat widget for portfolio site integration
@@ -38,7 +38,7 @@ chroma_db/               ← persistent vector index
 
 1. `prepare_docs.py` extracts structured context from each project
 2. Chunks are embedded with `all-MiniLM-L6-v2` and stored in ChromaDB
-3. At query time: project keyword detection → metadata-filtered retrieval → Ollama generation with strict grounding prompt
+3. At query time: project keyword detection → metadata-filtered retrieval → Groq generation with strict grounding prompt
 
 ## Document Extraction (`prepare_docs.py`)
 
@@ -97,7 +97,7 @@ Two source types with different roles:
 
 **Keyword-based project detection:** Project filtering relies on a static keyword list. Misspelled project names or paraphrased references are not caught. A more robust approach would use semantic similarity against project name embeddings, but the current approach is sufficient for the intended use case.
 
-**Local inference only:** Generation requires Ollama running locally. If Ollama is offline, the chatbot falls back to displaying retrieved chunks without generation.
+**Cloud inference dependency:** Generation requires a valid `GROQ_API_KEY`. If the Groq API is unreachable, the endpoint returns an error string rather than a structured fallback.
 
 ## Setup
 
@@ -107,18 +107,21 @@ pip install -r requirements.txt
 # Build knowledge base
 python prepare_docs.py
 
-# Start chatbot (requires Ollama with a model pulled)
+# Start CLI chatbot
 python rag_chatbot.py
+
+# Or start FastAPI server
+fastapi dev app.py
 ```
 
-**Ollama model:** Default is `qwen3:14b`. Falls back to any available Qwen or Llama model.
+**LLM:** Groq API with `llama-3.3-70b-versatile`. Requires `GROQ_API_KEY` in `.env`.
 
 ## Commands
 
 | Command    | Description                                               |
 | ---------- | --------------------------------------------------------- |
 | `/reindex` | Rebuild ChromaDB index from current `documents/` contents |
-| `/info`    | Show active model, index size, Ollama status              |
+| `/info`    | Show active model, index size                             |
 | `/help`    | List commands                                             |
 | `/exit`    | Quit                                                      |
 

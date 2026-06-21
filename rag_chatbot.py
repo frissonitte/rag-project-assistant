@@ -1,7 +1,9 @@
 import os
 import sys
-import requests
 import chromadb
+from dotenv import load_dotenv
+load_dotenv()
+from groq import Groq
 from sentence_transformers import SentenceTransformer
 from rich.console import Console
 from rich.panel import Panel
@@ -15,8 +17,7 @@ from rich.table import Table
 PERSISTENT_DB = True
 CHROMA_DB_PATH = "./chroma_db"
 COLLECTION_NAME = "projects"
-DEFAULT_OLLAMA_MODEL = "qwen3:14b"
-OLLAMA_URL = "http://localhost:11434"
+GROQ_MODEL = "llama-3.3-70b-versatile"
 DOCS_DIR = "documents"
 
 console = Console()
@@ -92,36 +93,13 @@ def load_documents():
 
     return all_chunks, sources, projects
 
-def check_ollama():
-    try:
-        response = requests.get(f"{OLLAMA_URL}/api/tags", timeout=2)
-        if response.status_code == 200:
-            models = [m["name"] for m in response.json().get("models", [])]
-            return True, models
-    except Exception:
-        pass
-    return False, []
-
 def init_rag(verbose=False) -> dict:
     """It initializes the models and vector database. It is common to both FastAPI and CLI."""
-    ollama_running, available_models = check_ollama()
-    active_model = DEFAULT_OLLAMA_MODEL
-
-    if ollama_running:
-        if active_model not in available_models and (active_model + ":latest") not in available_models:
-            similar = [m for m in available_models if "qwen" in m.lower() or "llama" in m.lower()]
-            if similar:
-                active_model = similar[0]
-                if verbose: console.print(f"[yellow]Note: Configured model '{DEFAULT_OLLAMA_MODEL}' not found in Ollama. Using available model: '{active_model}'[/yellow]")
-            elif available_models:
-                active_model = available_models[0]
-                if verbose: console.print(f"[yellow]Note: Configured model '{DEFAULT_OLLAMA_MODEL}' not found. Falling back to: '{active_model}'[/yellow]")
-            else:
-                if verbose: console.print(f"[red]Warning: No models found in your Ollama installation. Please pull a model (e.g. 'ollama pull qwen2.5:14b')[/red]")
-    else:
-        if verbose: 
-            console.print("[bold red] Ollama is not running on http://localhost:11434.[/bold red]")
-            console.print("[yellow]The generation step (Step 5) will be mocked (showing retrieved documents only).[/yellow]\n")
+    groq_api_key = os.environ.get("GROQ_API_KEY")
+    if not groq_api_key:
+        if verbose: console.print("[bold red]GROQ_API_KEY not set in environment.[/bold red]")
+        sys.exit(1)
+    groq_client = Groq(api_key=groq_api_key)
 
     try:
         model = SentenceTransformer('all-MiniLM-L6-v2')
@@ -180,16 +158,14 @@ def init_rag(verbose=False) -> dict:
         "model": model,
         "collection": collection,
         "client": client,
-        "ollama_running": ollama_running,
-        "active_model": active_model
+        "groq_client": groq_client,
     }
 
 def answer_query(query: str, state: dict) -> str:
-    """It takes the query, searches in ChromaDB, and generates the response with Ollama. It's common to both API and CLI."""
+    """Takes the query, retrieves from ChromaDB, generates response via Groq. Common to both API and CLI."""
     model = state["model"]
     collection = state["collection"]
-    ollama_running = state["ollama_running"]
-    active_model = state["active_model"]
+    groq_client = state["groq_client"]
 
     SIMILARITY_THRESHOLD = 1.40
     PROJECT_KEYWORDS = {
@@ -249,46 +225,30 @@ def answer_query(query: str, state: dict) -> str:
     metadatas = [m for _, _, m in filtered]
 
     # Generation
-    if not ollama_running:
-        ollama_running, available_models = check_ollama()
-        if ollama_running:
-            if active_model in available_models:
-                pass # active model remains same
-            elif available_models:
-                active_model = available_models[0]
-            state["ollama_running"] = True
-            state["active_model"] = active_model
-
-    if ollama_running:
-        try:
-            context = "\n\n".join(context_chunks)
-            source_list = ", ".join({m.get('source', 'unknown') for m in metadatas if m})
-            system_instruction = (
-                "You are an assistant that answers questions about the developer's own projects. "
-                "The context below comes from that project's documentation and source code.\n"
-                "Rules:\n"
-                "1. Answer using information present in the context, including reasonable direct inferences.\n"
-                "2. If the context genuinely contains no relevant information, say exactly: 'I don't have this information.' and stop.\n"
-                "3. Do not invent facts not supported by the context.\n"
-                "4. Mention which project or file the information comes from.\n"
-                "5. Be concise and precise. Answer in the same language as the question."
-            )
-            prompt = f"{system_instruction}\n\nSources: {source_list}\n\nContext:\n{context}\n\nQuestion: {query}\nAnswer:"
-            
-            response = requests.post(
-                f"{OLLAMA_URL}/api/generate",
-                json={"model": active_model, "prompt": prompt, "stream": False},
-                timeout=60,
-            )
-            return response.json()['response']
-        except Exception as e:
-            return f"Error generating response from Ollama: {e}"
-    else:
-        return (
-            "*Ollama is offline. Here is the context that would be sent to the model:*\n\n"
-            f"**Question:** {query}\n\n"
-            f"**Context length:** {len(context_chunks)} chunks.*"
+    try:
+        context = "\n\n".join(context_chunks)
+        source_list = ", ".join({m.get('source', 'unknown') for m in metadatas if m})
+        system_instruction = (
+            "You are an assistant that answers questions about the developer's own projects. "
+            "The context below comes from that project's documentation and source code.\n"
+            "Rules:\n"
+            "1. Answer using information present in the context, including reasonable direct inferences.\n"
+            "2. If the context genuinely contains no relevant information, say exactly: 'I don't have this information.' and stop.\n"
+            "3. Do not invent facts not supported by the context.\n"
+            "4. Mention which project or file the information comes from.\n"
+            "5. Be concise and precise. Answer in the same language as the question."
         )
+        user_message = f"Sources: {source_list}\n\nContext:\n{context}\n\nQuestion: {query}"
+        response = groq_client.chat.completions.create(
+            model=GROQ_MODEL,
+            messages=[
+                {"role": "system", "content": system_instruction},
+                {"role": "user", "content": user_message},
+            ],
+        )
+        return response.choices[0].message.content
+    except Exception as e:
+        return f"Error generating response from Groq: {e}"
 
 def main():
     """This is for CLI orchestration only. The API will not handle this."""
@@ -321,8 +281,8 @@ def main():
                 info_table = Table(title="System Information")
                 info_table.add_column("Property", style="yellow")
                 info_table.add_column("Value", style="white")
-                info_table.add_row("Ollama Status", "Connected" if state["ollama_running"] else "Disconnected")
-                info_table.add_row("Ollama LLM Model", state["active_model"])
+                info_table.add_row("LLM Provider", "Groq")
+                info_table.add_row("LLM Model", GROQ_MODEL)
                 info_table.add_row("Chroma DB Items", str(state["collection"].count()))
                 console.print(info_table)
                 continue

@@ -104,6 +104,10 @@ Two source types with different roles:
 ```bash
 pip install -r requirements.txt
 
+# Set up API key
+cp .env.example .env
+# Edit .env and add your GROQ_API_KEY
+
 # Build knowledge base
 python prepare_docs.py
 

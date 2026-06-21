@@ -246,9 +246,14 @@ def answer_query(query: str, state: dict) -> str:
                 {"role": "user", "content": user_message},
             ],
         )
-        return response.choices[0].message.content
+        sources = sorted({m.get('source', 'unknown') for m in metadatas if m})
+        return {
+            "answer": response.choices[0].message.content,
+            "sources": sources,
+            "low_confidence": low_confidence,
+        }
     except Exception as e:
-        return f"Error generating response from Groq: {e}"
+        raise RuntimeError(f"Groq API error: {e}") from e
 
 def main():
     """This is for CLI orchestration only. The API will not handle this."""
@@ -288,10 +293,13 @@ def main():
                 continue
 
             with console.status("[cyan]Retrieving context and generating answer...[/cyan]"):
-                answer = answer_query(query, state)
-            
+                result = answer_query(query, state)
+
+            if result["low_confidence"]:
+                console.print("[bold yellow]⚠ Low confidence: answer may be unreliable.[/bold yellow]")
+            console.print(f"[dim]Sources: {', '.join(result['sources'])}[/dim]")
             console.print("\n[bold green] Bot Answer:[/bold green]")
-            console.print(Panel(Markdown(answer), border_style="green"))
+            console.print(Panel(Markdown(result["answer"]), border_style="green"))
             console.print("")
 
         except KeyboardInterrupt:

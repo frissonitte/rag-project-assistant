@@ -1,0 +1,8 @@
+venv/
+static/
+__pycache__/
+**/__pycache__/
+projects/
+.git/
+.gitignore
+.env

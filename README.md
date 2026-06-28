@@ -23,7 +23,7 @@ A local RAG (Retrieval-Augmented Generation) chatbot for querying personal proje
 - [x] Replace Ollama with Groq API (Llama 3.3 70B) for cloud inference
 - [x] Expose `/chat` POST endpoint via FastAPI
 - [x] Add IP-based rate limiting (`slowapi`)
-- [ ] Deploy backend to Hugging Face Spaces (Docker SDK)
+- [x] Deploy backend to Hugging Face Spaces (Docker SDK)
 - [ ] Build vanilla JS chat widget for portfolio site integration
 - [ ] Embed widget into [emirhanyildirim.me](https://emirhanyildirim.me) (Jekyll / GitHub Pages)
 

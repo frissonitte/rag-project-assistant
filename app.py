@@ -1,4 +1,7 @@
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Request
+from slowapi import Limiter, _rate_limit_exceeded_handler
+from slowapi.util import get_remote_address
+from slowapi.errors import RateLimitExceeded
 from pydantic import BaseModel
 from contextlib import asynccontextmanager
 from rag_chatbot import init_rag, answer_query, GROQ_MODEL
@@ -23,8 +26,13 @@ class QueryResponse(BaseModel):
     sources: list[str]
     low_confidence: bool
 
+limiter = Limiter(key_func=get_remote_address)
+app.state.limiter = limiter
+app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
+
 @app.post("/query", response_model=QueryResponse)
-def query_endpoint(req: QueryRequest):
+@limiter.limit("3/hour")
+def query_endpoint(request: Request, req: QueryRequest):
     if not req.query.strip():
         raise HTTPException(status_code=400, detail="Query cannot be empty.")
     try:

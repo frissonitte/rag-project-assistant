@@ -1,0 +1,475 @@
+# Code Context: WBC Analyzer
+
+=== File: app.py ===
+CONSTANT: CLASS_MORPHOLOGY_CONTEXT = {'Neutrophil': 'Neutrophils are identified by their multi-lobed nucleus (typically 3-5 lobes) and pale pink cytoplasm with fine granules. The model should focus on the nuclear lobes and their interconnecting filaments, not on background erythrocytes.', 'Lymphocyte': 'Lymphocytes have a large, round, darkly stained nucleus that nearly fills the cell, with only a thin rim of pale blue cytoplasm. Correct model focus should be on the nucleus-to-cytoplasm ratio and nuclear chromatin density.', 'Monocyte': 'Monocytes are the largest leukocytes with a kidney-shaped or horseshoe-shaped nucleus and abundant gray-blue cytoplasm that may contain vacuoles. The nucleus shape and cytoplasmic texture are the key discriminating features.', 'Eosinophil': 'Eosinophils have a bilobed nucleus and distinctive large, bright orange-red granules filling the cytoplasm. The granule pattern and bilobed nucleus, not background cells, should be the model focus.', 'Basophil': 'Basophils are rare and characterized by large, dark purple-blue granules that may obscure the nucleus. Correct focus should be on these coarse, deeply stained granules and the irregular nuclear outline beneath them.'}
+
+CONSTANT: SYSTEM_INSTRUCTION = "You are a clinical AI assistant supporting hematology laboratory review.\nYour role is to interpret Grad-CAM explainability heatmaps produced by a white blood cell classification model.\n\nIn the provided overlay image:\n- RED/YELLOW areas = regions the model weighted most heavily when making its decision\n- BLUE/DARK areas = regions the model largely ignored\n\nYour response must follow this structure, but write it as flowing prose, not as a numbered list:\n1. One sentence stating the predicted class and confidence level.\n2. One to two sentences describing which morphological structures the heatmap highlights (nucleus, cytoplasm, granules, cell membrane, background, etc.) and whether this aligns with the expected discriminating features for this cell type.\n3. One sentence giving a clinical plausibility verdict: either confirm the focus is medically sound, flag a concern if the model appears to focus on background erythrocytes or staining artifacts, or note uncertainty if the heatmap is diffuse.\n\nConstraints:\n- Do not provide a definitive diagnosis.\n- Do not repeat the class name more than twice.\n- Avoid generic phrases like 'the model performed well' unless genuinely warranted.\n- Keep the total response under 80 words.\n- Write in the same language as the prompt you receive.\n"
+
+CONSTANT: BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+
+CONSTANT: MODEL_PATH = os.path.join(BASE_DIR, 'data', 'models', 'wbc_final_model_densenet.keras')
+
+CONSTANT: ALLOWED_MIME_TYPES = {'image/jpeg', 'image/png', 'image/bmp'}
+
+--- Function: def _before_request() ---
+
+--- Function: def _after_request(response) ---
+
+--- Function: def get_main_output_tensor(model) ---
+"""Return the primary output tensor from single- or multi-output models."""
+
+--- Function: def extract_main_predictions(predictions) ---
+"""Extract the main prediction array from dict/list/tensor model outputs."""
+
+--- Function: def find_available_port(host, preferred_port, max_attempts = 20) ---
+"""Return the first bindable port starting from preferred_port.
+Falls back when Windows blocks or another process already owns the port."""
+
+--- Function: def make_gradcam_heatmap(img_array, model, last_conv_layer_name, pred_index = None) ---
+"""Compute normalized Guided Grad-CAM heatmap for the selected class index."""
+
+--- Function: def generate_agent_report_with_gpt4o(prompt, heatmap_img_array, system_instruction, github_token) ---
+"""Generate report with GitHub Models gpt-4o as primary model."""
+
+--- Function: def get_env_token(*names) ---
+"""Return the first non-empty token value among environment variable names."""
+
+--- Function: def build_agent_prompt(predicted_class, confidence, lang = 'en') ---
+"""Build a class-aware prompt so each report uses distinct morphology anchors."""
+
+--- Function: def generate_agent_report(predicted_class, confidence, heatmap_img_array, lang = 'en') ---
+"""Generate a concise LLM-based interpretation report from XAI overlay image."""
+
+--- Function: def get_last_conv_layer(model) ---
+"""Find the most suitable layer for Grad-CAM."""
+
+--- Function: def home() ---
+"""Serve the single-page web UI."""
+
+--- Function: def predict() ---
+"""Run preprocessing, model inference, Grad-CAM generation, and report synthesis."""
+
+--- Function: def health() ---
+
+--- Inline Comments ---
+Mixed precision is optional; if unavailable, run with default precision.
+Guided Grad-CAM suppresses negative activation and gradient effects.
+Class-specific morphology anchors to reduce generic report patterns.
+Support both names to avoid breaking existing local setups.
+Warm-up avoids first-request latency spikes in production-like usage.
+Keep all class probabilities for chart rendering on the client.
+===== GRAD-CAM SECTION =====
+Fix heatmap dimensions when needed.
+Resize to 224x224 and smooth the heatmap.
+Apply a soft cell mask to suppress background influence.
+Hide low activations and emphasize only the upper percentile regions.
+Overlay the heatmap on top of the original image.
+Use dynamic alpha to paint only strong XAI focus regions.
+Encode the visualization as Base64.
+===== END GRAD-CAM SECTION =====
+
+=== File: eval_baseline.py ===
+CONSTANT: CLASS_NAMES = ['Basophil', 'Eosinophil', 'Lymphocyte', 'Monocyte', 'Neutrophil']
+
+CONSTANT: IMAGE_EXTENSIONS = {'.jpg', '.jpeg', '.png', '.bmp', '.tif', '.tiff', '.webp'}
+
+CONSTANT: BASELINE_MODELS = ['VGG16', 'ResNet50V2', 'MobileNetV2', 'EfficientNetB0', 'DenseNet121_vanilla']
+
+--- Function: def configure_gpu() ---
+"""Enable memory growth to avoid OOM on GPU."""
+
+--- Function: def parse_args() ---
+
+--- Function: def resolve_model_paths(args) ---
+"""Return list of (model_name, model_path) to evaluate."""
+
+--- Function: def load_model(model_path) ---
+"""Load a standard Keras model with no custom objects."""
+
+--- Function: def collect_samples(split_dir, limit = None) ---
+
+--- Function: def preprocess_image(image_path) ---
+"""Load, resize, and apply medical_enhanced — same pipeline as training."""
+
+--- Function: def build_tta_batch(image) ---
+"""8-variant deterministic TTA batch identical to class.py."""
+
+--- Function: def predict_samples(model, samples, batch_size, tta_mode) ---
+
+--- Function: def compute_confusion_matrix(y_true, y_pred) ---
+
+--- Function: def build_classification_report(y_true, y_pred) ---
+
+--- Function: def save_confusion_matrix(y_true, y_pred, output_path, title) ---
+
+--- Function: def save_predictions_csv(output_path, file_paths, y_true, y_pred, probabilities) ---
+
+--- Function: def evaluate_split(model, split_name, split_dir, output_dir, batch_size, tta_mode, limit = None) ---
+
+--- Function: def evaluate_combined(results, output_dir) ---
+
+--- Function: def evaluate_one_model(model_name, model_path, args, output_root) ---
+
+--- Function: def main() ---
+
+--- Inline Comments ---
+Free GPU memory before next model
+
+=== File: eval_final.py ===
+CONSTANT: CLASS_NAMES = ['Basophil', 'Eosinophil', 'Lymphocyte', 'Monocyte', 'Neutrophil']
+
+CONSTANT: IMAGE_EXTENSIONS = {'.jpg', '.jpeg', '.png', '.bmp', '.tif', '.tiff', '.webp'}
+
+CONSTANT: _PREPROCESSING_DISPATCH = {'v1': PreprocessingFilters.medical_enhanced, 'v2': PreprocessingFilters.medical_enhanced_v2, 'v3': PreprocessingFilters.medical_enhanced_v3, 'v4': PreprocessingFilters.medical_enhanced_v4}
+
+--- Function: def parse_args() ---
+"""Parse CLI options for evaluation and report generation."""
+
+--- Function: def resolve_model_path(explicit_path = None) ---
+"""Resolve and validate the model path, using defaults when needed."""
+
+--- Function: def load_trained_model(model_path) ---
+"""Load the trained Keras model with custom layer/loss registrations."""
+
+--- Function: def extract_predictions(predictions) ---
+"""Extract main and optional auxiliary outputs from model prediction formats."""
+
+--- Function: def estimate_reinhard_reference(data_root, split_name, image_size, max_samples, seed) ---
+"""Estimate dataset-level LAB statistics used for Reinhard normalization."""
+
+--- Function: def apply_reinhard_normalization(image, target_mean, target_std) ---
+"""Normalize image color distribution to target LAB mean/std statistics."""
+
+--- Function: def collect_samples(split_dir, limit = None) ---
+"""Collect image paths and class labels from a split directory."""
+
+--- Function: def preprocess_image(image_path, color_normalization, target_lab_mean, target_lab_std, preprocessing = 'v1') ---
+"""Load, resize, normalize, and enhance a single image for inference."""
+
+--- Function: def build_tta_batch(image) ---
+"""Create a deterministic light-TTA batch for robust inference averaging."""
+
+--- Function: def infer_main_and_aux(model, batch_images, tta_mode) ---
+"""Run inference with optional TTA and aggregate main/aux outputs."""
+
+--- Function: def apply_testb_binary_mode(main_predictions, aux_predictions, mode) ---
+"""Apply TestB-specific binary routing strategy on top of multi-class outputs."""
+
+--- Function: def predict_samples(model, samples, batch_size, split_name, tta_mode, testb_binary_mode, color_normalization, target_lab_mean, target_lab_std, preprocessing = 'v1') ---
+"""Predict a split in mini-batches and return labels, probabilities, and paths."""
+
+--- Function: def compute_confusion_matrix(y_true, y_pred) ---
+"""Compute confusion matrix counts for fixed class order in CLASS_NAMES."""
+
+--- Function: def build_classification_report(y_true, y_pred) ---
+"""Build a text classification report plus the underlying confusion matrix."""
+
+--- Function: def save_confusion_matrix(y_true, y_pred, output_path, title) ---
+"""Render and save confusion matrix heatmap as an image file."""
+
+--- Function: def save_predictions_csv(output_path, file_paths, y_true, y_pred, probabilities) ---
+"""Save per-file predictions and class probabilities as CSV."""
+
+--- Function: def evaluate_split(model, split_name, split_dir, output_dir, batch_size, tta_mode, testb_binary_mode, color_normalization, target_lab_mean, target_lab_std, preprocessing = 'v1', limit = None) ---
+"""Evaluate one split, write report artifacts, and return raw prediction data."""
+
+--- Function: def evaluate_combined(results, output_dir) ---
+"""Merge split outputs and write a combined report and confusion matrix."""
+
+--- Function: def main() ---
+"""Run end-to-end evaluation for TestA, TestB, and combined outputs."""
+
+--- Inline Comments ---
+v4 does its own Macenko stain normalization; Reinhard on top is redundant.
+Keep TTA deterministic for reproducible evaluation.
+Predict all deterministic TTA variants and average to reduce variance.
+Restrict TestB decision to Lymphocyte vs Neutrophil using main head scores.
+Use auxiliary sigmoid as a direct Neutrophil-vs-Lymphocyte probability.
+
+=== File: train_baseline_comparison.py ===
+CONSTANT: MODELS_TO_COMPARE = ['VGG16', 'ResNet50V2', 'MobileNetV2', 'EfficientNetB0', 'DenseNet121_vanilla']
+
+CONSTANT: IMG_SIZE = 224
+
+CONSTANT: BATCH_SIZE = 32
+
+CONSTANT: PHASE1_EPOCHS = 12
+
+CONSTANT: PHASE2_EPOCHS = 12
+
+CONSTANT: SEED = 42
+
+CONSTANT: VAL_FRACTION = 0.15
+
+CONSTANT: IMAGE_EXTS = {'.jpg', '.jpeg', '.png', '.bmp', '.tif', '.tiff'}
+
+--- Function: def load_dataset(data_root: Path, split: str, class_names: list, val_fraction: float) ---
+"""Görüntü yollarını ve etiketleri yükle, train/val olarak ayır."""
+
+--- Function: def make_tf_dataset(paths, labels, n_classes, batch_size, training = False) ---
+"""tf.data.Dataset oluştur.
+
+
+Pipeline order:
+
+  map(load+preprocess) → cache → [shuffle+augment if training] → batch → prefetch
+
+
+cache() ensures medical_enhanced runs once per image instead of once per epoch."""
+
+--- Function: def build_model(model_name: str, n_classes: int) ---
+"""Her model için aynı head mimarisi — backbone farkı görmek istiyoruz."""
+
+--- Function: def compile_model(model, lr = 0.001) ---
+
+--- Function: def compute_metrics(model, val_ds, class_names) ---
+"""Accuracy ve macro F1 hesapla."""
+
+--- Function: def measure_inference_time(model, n_runs = 50) -> float ---
+"""Ortalama tek görüntü inference süresi (ms)."""
+
+--- Function: def train_model(model_name, train_ds, val_ds, n_classes, phase1_epochs, phase2_epochs) ---
+
+--- Function: def generate_latex_table(results: list) -> str ---
+"""Karşılaştırma tablosu için LaTeX kodu üret."""
+
+--- Function: def main() ---
+
+--- Inline Comments ---
+─── CONFIG ────────────────────────────────────────────────────────────────
+─── DATA LOADING ──────────────────────────────────────────────────────────
+Inside tf.numpy_function the argument is already a numpy array.
+Cache preprocessed images in RAM so epochs 2+ skip disk I/O and medical_enhanced.
+─── MODEL BUILDERS ────────────────────────────────────────────────────────
+─── METRICS ───────────────────────────────────────────────────────────────
+Single pass with model.predict avoids per-batch Python overhead.
+Warmup — ensures XLA/TF graph compilation happens before timing.
+─── TRAINING ──────────────────────────────────────────────────────────────
+Phase 1 — feature extraction
+Phase 2 — fine-tune
+─── LATEX TABLE ───────────────────────────────────────────────────────────
+─── MAIN ──────────────────────────────────────────────────────────────────
+Sınıf isimlerini bul
+Resume: load completed results from previous run
+Save after each model so a crash doesn't lose completed results.
+LaTeX tablosu
+Terminalde özet
+
+=== File: train_main_model.py ===
+CONSTANT: IMAGE_EXTENSIONS = {'.jpg', '.jpeg', '.png', '.bmp', '.tif', '.tiff', '.webp'}
+
+CONSTANT: MAIN_OUTPUT_NAME = 'main_out'
+
+CONSTANT: AUX_OUTPUT_NAME = 'aux_binary_out'
+
+--- Class: class WBCSequence(keras.utils.Sequence): ---
+  """Keras Sequence that serves augmented training and deterministic eval batches."""
+  def __init__(self, samples, class_names, batch_size, image_size, seed, training, enable_aux_binary_head, aux_positive_index, aux_negative_index, color_normalization, target_lab_mean, target_lab_std, crop_prob, bg_randomization_prob, bg_randomization_strength, stain_jitter_prob, neutrophil_aug_scale, lymphocyte_aug_scale)
+  def __len__(self):
+    """Return number of batches per epoch."""
+  def on_epoch_end(self):
+    """Shuffle sample order between epochs during training."""
+  def __getitem__(self, index):
+    """Build one batch of images and labels (plus aux/sample weights when enabled)."""
+
+--- Class: class XAIFocusMonitor(keras.callbacks.Callback): ---
+  """Callback that monitors foreground focus ratio and can trigger early stop."""
+  def __init__(self, sample_paths, image_size, threshold, patience, every_n_epochs, color_normalization, target_lab_mean, target_lab_std)
+  def on_train_begin(self, logs = None):
+    """Resolve target conv layer before training starts."""
+  def on_epoch_end(self, epoch, logs = None):
+    """Periodically compute XAI focus metrics and update early-stop state."""
+
+--- Function: def parse_args() ---
+"""Parse CLI arguments for shortcut-resistant training configuration."""
+
+--- Function: def parse_class_weights(raw_value, expected_count) ---
+"""Parse and validate comma-separated class weights for focal loss."""
+
+--- Function: def build_main_head_loss(args, class_weights) ---
+"""Create the configured main-head loss object."""
+
+--- Function: def get_main_output_tensor(model) ---
+"""Return the main output tensor from single- or multi-output models."""
+
+--- Function: def extract_main_predictions(predictions) ---
+"""Extract main prediction array from dict/list/tensor model outputs."""
+
+--- Function: def set_global_seed(seed) ---
+"""Set Python, NumPy, and TensorFlow seeds for reproducibility."""
+
+--- Function: def list_class_names(train_dir) ---
+"""List and sort class folder names under the training directory."""
+
+--- Function: def collect_samples(train_dir, class_names) ---
+"""Collect all image samples as (path, class_index) tuples."""
+
+--- Function: def split_train_val(samples, num_classes, val_fraction, seed) ---
+"""Build stratified-like train/validation split with per-class safety checks."""
+
+--- Function: def load_rgb_image(image_path, image_size) ---
+"""Load image from disk, convert BGR->RGB, and resize to model input size."""
+
+--- Function: def estimate_reinhard_reference(samples, image_size, seed, max_samples) ---
+"""Estimate LAB channel statistics from sampled train images."""
+
+--- Function: def apply_reinhard_normalization(image, target_mean, target_std) ---
+"""Map source LAB distribution to target LAB mean/std."""
+
+--- Function: def crop_to_foreground(image, mask, rng) ---
+"""Crop around estimated foreground with random jitter and resize back."""
+
+--- Function: def apply_stain_jitter(image, rng, prob) ---
+"""Apply mild LAB-space jitter to emulate stain/capture variance."""
+
+--- Function: def randomize_background(image, mask, rng, prob, strength) ---
+"""Perturb non-foreground regions to discourage background shortcuts."""
+
+--- Function: def preprocess_for_training(image, rng, label_name, color_normalization, target_lab_mean, target_lab_std, crop_prob, bg_randomization_prob, bg_randomization_strength, stain_jitter_prob, neutrophil_aug_scale, lymphocyte_aug_scale) ---
+
+--- Function: def preprocess_for_eval(image, color_normalization, target_lab_mean, target_lab_std) ---
+"""Deterministic preprocessing path used in validation and XAI checks."""
+
+--- Function: def build_model(num_classes, image_size, enable_aux_binary_head) ---
+"""Build DenseNet121 backbone with attention block and optional auxiliary head."""
+
+--- Function: def get_last_conv_layer_name(model) ---
+"""Find the deepest valid Conv2D layer for Grad-CAM."""
+
+--- Function: def make_gradcam_heatmap(img_batch, model, last_conv_layer_name, pred_index) ---
+"""Compute Guided Grad-CAM heatmap for one input batch and class index."""
+
+--- Function: def compute_xai_focus_ratio(model, sample_paths, image_size, last_conv_layer_name, color_normalization, target_lab_mean, target_lab_std) ---
+"""Measure what fraction of Grad-CAM energy lies on estimated foreground."""
+
+--- Function: def plot_history(history_phase1, history_phase2, output_path) ---
+"""Plot two-phase training curves into a single artifact image."""
+
+--- Function: def write_split_summary(summary_path, class_names, train_samples, val_samples) ---
+"""Write class-wise train/validation counts as CSV."""
+
+--- Function: def main() ---
+"""Run the full shortcut-resistant training pipeline."""
+
+--- Inline Comments ---
+Keep eval and training color-space aligned before stochastic augmentations.
+Foreground crop is class-scaled to reduce shortcut learning asymmetrically.
+Final shared enhancement keeps training input distribution close to inference.
+Only designated classes contribute to the auxiliary binary loss.
+
+=== File: src\custom_layers.py ===
+--- Class: class MedSwish(layers.Layer): ---
+  """Swish-like activation with trainable slope and enhancement terms."""
+  def __init__(self, alpha = 0.1, beta = 1.0, trainable_params = True, **kwargs)
+  def build(self, input_shape)
+  def call(self, x)
+  def get_config(self)
+
+--- Class: class WBCAttentionBlock(layers.Layer): ---
+  """CBAM-style attention block with channel then spatial refinement."""
+  def __init__(self, reduction_ratio = 16, **kwargs)
+  def build(self, input_shape)
+  def channel_attention(self, x)
+  def spatial_attention(self, x)
+  def call(self, x)
+  def get_config(self)
+
+--- Inline Comments ---
+Base swish branch + bounded enhancement branch.
+Pool across spatial axes to summarize each channel.
+Pool across channels to highlight informative spatial locations.
+Sequential channel->spatial attention keeps behavior deterministic.
+
+=== File: src\custom_losses.py ===
+--- Class: class WBCFocalLoss(keras.losses.Loss): ---
+  """WBC focal loss.
+
+Formula: FL(p_t) = -α_t * (1 - p_t)^γ * log(p_t)"""
+  def __init__(self, gamma = 2.0, alpha = 0.25, class_weights = None, label_smoothing = 0.1, name = 'wbc_focal_loss', **kwargs)
+  def call(self, y_true, y_pred):
+    """Compute class-weighted focal loss with optional label smoothing."""
+  def get_config(self):
+    """Return serializable layer configuration."""
+
+=== File: src\preprocessing.py ===
+--- Class: class PreprocessingFilters: ---
+  def original(image: np.ndarray) -> np.ndarray:
+    """Baseline: scale to float32 [0, 1] with no spatial processing."""
+  def clahe(image: np.ndarray, clip_limit: float = 2.0, tile_size: int = 8) -> np.ndarray:
+    """CLAHE in LAB space — boosts local contrast without hue shift."""
+  def gaussian_sharpen(image: np.ndarray, strength: float = 1.5, kernel_size: int = 5) -> np.ndarray:
+    """Laplacian-based sharpening — subtracts second-order edges from the image."""
+  def bilateral(image: np.ndarray, d: int = 9, sigma_color: float = 75.0, sigma_space: float = 75.0) -> np.ndarray:
+    """Edge-preserving smoothing; reduces microscopy shot noise without blurring membranes."""
+  def unsharp_mask(image: np.ndarray, radius: int = 9, amount: float = 0.5, sigma: float = 10.0, threshold: int = 0) -> np.ndarray:
+    """Classic unsharp mask with optional edge threshold.
+Only pixels where |original - blurred| > threshold get sharpened,
+preventing noise amplification in flat background regions."""
+  def reinhard_normalize(image: np.ndarray, target_mean: Tuple[float, float, float] = (148.6, 169.3, 105.97), target_std: Tuple[float, float, float] = (41.13, 9.01, 6.67)) -> np.ndarray:
+    """Reinhard stain-transfer normalization.
+Matches mean/std of each LAB channel to a fixed reference, reducing
+slide-to-slide variability caused by different staining protocols or microscopes.
+Default reference stats derived from a well-stained MGG blood smear."""
+  def gamma_correction(image: np.ndarray, gamma: float = 1.2) -> np.ndarray:
+    """Power-law intensity transform via LUT.
+gamma < 1 brightens underexposed smears; gamma > 1 compresses highlights.
+Useful for normalizing slides captured under varying illumination levels."""
+  def morphological_tophat(image: np.ndarray, kernel_size: int = 15) -> np.ndarray:
+    """White top-hat minus black bottom-hat enhancement.
+Top-hat recovers bright granules (eosinophilic granules, cytoplasm detail);
+bottom-hat recovers dark nuclei features. Together they separate cell
+substructures from a slowly varying background more cleanly than linear sharpening."""
+  def color_balance(image: np.ndarray, low_pct: float = 1.0, high_pct: float = 99.0) -> np.ndarray:
+    """Per-channel percentile stretch (robust gray-world variant).
+Compensates for white-balance drift and dye batch differences across slides
+by remapping each channel's dynamic range independently."""
+  def medical_enhanced(image: np.ndarray) -> np.ndarray:
+    """Apply robust contrast normalization and edge-aware enhancement for smear images."""
+  def _macenko_normalize(img: np.ndarray) -> np.ndarray:
+    """Macenko SVD stain normalization for MGG/Giemsa blood smear images.
+Extracts per-image stain vectors via SVD, then scales concentrations to
+a fixed MGG reference. This removes scanner- and batch-level color drift
+without requiring an external reference image at runtime.
+Falls back to input unchanged if foreground pixels are too few or SVD fails."""
+  def medical_enhanced_v2(image: np.ndarray) -> np.ndarray:
+    """Adaptive-CLAHE variant of medical_enhanced.
+Key differences from v1:
+  - CLAHE clip limit adapts to per-image L-channel std (low contrast → gentler boost).
+  - Tile grid enlarged from (4,4) to (8,8) — less aggressive local contrast.
+Reduces noise amplification on low-contrast or over-exposed smears."""
+  def medical_enhanced_v3(image: np.ndarray) -> np.ndarray:
+    """v2 + morphological top-hat/bottom-hat enhancement.
+Top-hat recovers bright granules (eosinophilic granules, cytoplasm);
+bottom-hat recovers dark nucleus features.
+Improves Eosinophil and Basophil separation from background."""
+  def medical_enhanced_v4(image: np.ndarray) -> np.ndarray:
+    """v3 + Macenko SVD stain normalization (self-contained, no external reference).
+Macenko runs first to strip scanner/batch color drift before contrast enhancement.
+Strongest domain-shift robustness — recommended when --color-normalization=none
+(Macenko already handles color normalization; Reinhard on top is redundant)."""
+  def estimate_foreground_mask(image: np.ndarray) -> np.ndarray:
+    """Estimate a soft foreground mask for the leukocyte region.
+The mask is only for XAI visualization and does not affect model predictions."""
+
+--- Function: def _to_uint8(image: np.ndarray) -> np.ndarray ---
+"""Normalize any float or uint8 image to uint8 [0, 255]."""
+
+--- Inline Comments ---
+Percentile clipping stabilizes exposure differences across microscopes.
+CLAHE in LAB space improves local contrast without shifting hue too much.
+Bilateral filter denoises while preserving boundaries.
+Edge-weighted blending avoids over-sharpening smooth regions.
+MGG reference: col0 = azure/methylene-blue (nuclei), col1 = eosin (cytoplasm).
+Derived from typical well-stained Raabin WBC images (approximate unit vectors).
+Keep only foreground pixels (background has near-zero OD).
+Assign: stain with higher R-OD is azure/methylene-blue (nuclei).
+Morphological cleanup removes small background speckles.
+If foreground estimation fails, return an all-ones mask to avoid hiding XAI.
+
+=== File: tests\conftest.py ===
+--- Function: def app() ---
+
+--- Function: def client(app) ---
+
+=== File: tests\test_app.py ===
+--- Function: def test_health(client) ---

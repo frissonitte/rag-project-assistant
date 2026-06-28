@@ -1,0 +1,205 @@
+# Code Context: Popcorn Wagon
+
+=== File: config.py ===
+--- Class: class Config: ---
+
+=== File: data_loader.py ===
+--- Function: def main() ---
+
+=== File: filter_csv.py ===
+CONSTANT: ACTIVE_USER_THRESHOLD = 750
+
+--- Function: def filter_active_users() ---
+"""Filters out inactive users and movies that these users have not interacted with."""
+
+--- Inline Comments ---
+File paths
+Threshold values
+Load ratings data
+Identify active users
+Identify movies that active users are interacting with
+Get ratings data of active users only
+Load tags data and get movies tagged by active users
+Upload links file and get movies that active users are interacting with
+
+=== File: tmdb_api.py ===
+CONSTANT: BASE_URL = 'https://api.themoviedb.org/3'
+
+--- Function: def fetch_from_tmdb(endpoint, params = None) ---
+
+--- Function: def get_popular_movies(page = 1) ---
+
+--- Function: def get_trending_movies(time_window = 'day') ---
+
+--- Function: def get_movie_details(movie_id) ---
+
+--- Function: def get_movie_keywords(movie_id) ---
+
+--- Function: def get_keyword_id(keyword) ---
+
+--- Function: def keyword_search(keyword, page = 1) ---
+
+--- Function: def search(query, page = 1, include_adult = False) ---
+
+--- Function: def get_movie_images(movie_id) ---
+
+--- Function: def get_content_recommendations(movie_id) ---
+
+=== File: train_model.py ===
+CONSTANT: BATCH_SIZE = 500
+
+CONSTANT: ANNOY_TREES = 75
+
+CONSTANT: ANNOY_FILE = 'popcorn.ann'
+
+--- Function: def prepare_data() ---
+
+--- Function: def apply_dimensionality_reduction(sparse_matrix, max_dimension) ---
+"""Apply SVD with the manually configured dimension."""
+
+--- Function: def train_annoy_model(reduced_matrix, movie_map) ---
+"""Train the Annoy model with the reduced matrix."""
+
+--- Function: def main() ---
+
+--- Inline Comments ---
+Check for NaN or infinite values
+Map movie and user IDs to sequential indices
+Extract row, col, and data as 1D arrays
+Log the shapes of row, col, and data
+Create the sparse matrix
+Normalize the matrix
+Check for NaN or infinite values after normalization
+Apply SVD to the entire matrix
+Save the normalizer and SVD models
+Log the variance retained
+
+=== File: app\__init__.py ===
+--- Function: def create_app() ---
+
+=== File: app\auth.py ===
+--- Function: def load_user(user_id) ---
+
+--- Function: def login() ---
+
+--- Function: def register() ---
+
+--- Function: def logout() ---
+
+--- Function: def profile() ---
+
+=== File: app\models.py ===
+--- Class: class Movie(db.Model): ---
+
+--- Class: class Rating(db.Model): ---
+
+--- Class: class Tag(db.Model): ---
+
+--- Class: class User(db.Model, UserMixin): ---
+  def get_id(self)
+
+--- Class: class UserMovieData(db.Model): ---
+
+--- Class: class UserList(db.Model): ---
+
+--- Class: class UserListItems(db.Model): ---
+
+--- Class: class UserMapping(db.Model): ---
+
+=== File: app\routes.py ===
+--- Function: def index() ---
+
+--- Function: def movie_details(movieId) ---
+
+--- Function: def list_details(listId) ---
+
+--- Function: def recommendator() ---
+
+--- Function: def lists() ---
+
+--- Function: def search() ---
+
+--- Function: def dynamic_search() ---
+
+--- Function: def tag_search() ---
+
+--- Function: def edit_list(listId) ---
+
+--- Function: def remove_list() ---
+
+--- Function: def remove_item() ---
+
+--- Function: def create_list() ---
+
+--- Function: def add_to_list() ---
+
+--- Function: def add_to_liked() ---
+
+--- Function: def add_to_tags() ---
+
+--- Function: def init_routes(app) ---
+
+=== File: app\utils\auth_utils.py ===
+--- Function: def hash_pw(password) ---
+
+--- Function: def verify_pw(hashed_password, password) ---
+
+=== File: app\utils\date_utils.py ===
+--- Function: def format_date(date_input, format = '%b %d %Y') ---
+
+--- Function: def register_filters(app: Flask) ---
+
+=== File: app\utils\db_utils.py ===
+--- Function: def get_user_by_username(username) ---
+
+--- Function: def execute_query(query, params = {}) ---
+
+--- Function: def disable_foreign_keys() ---
+
+--- Function: def enable_foreign_keys() ---
+
+--- Function: def enable_wal_mode() ---
+
+--- Function: def chunks(lst, chunk_size) ---
+
+--- Function: def batch_insert(model, data, batch_size = 1000) ---
+
+--- Function: def read_csv(file_path, encoding = 'utf-8', sep = ',') ---
+
+--- Function: def load_csv_and_insert(model, file_path, sep = ',', chunk_size = 100000) ---
+
+--- Function: def load_movielens_users() ---
+
+--- Function: def check_users_and_mappings() ---
+
+--- Function: def load_data() ---
+
+--- Function: def dimension_check() ---
+
+=== File: app\utils\recommend_utils.py ===
+--- Function: def init_executor(app) ---
+
+--- Function: def load_ratings(force_reload = False) ---
+
+--- Function: def get_model() ---
+
+--- Function: def get_sparse_matrix(ratings_df) ---
+
+--- Function: def get_collaborative_recommendations(tmdb_id, num_recommendations = 5) ---
+
+--- Function: async def async_get_collaborative_recommendations(tmdb_id: int, num_recommendations: int = 5) -> List[int] ---
+
+--- Function: def get_hybrid_recommendations(movieId, num_recommendations = 10) ---
+
+--- Inline Comments ---
+Fetch the movie by TMDB ID
+Load ratings data
+Create the user-movie matrix
+Check if the movie exists in the matrix
+Load the Annoy model
+Get the movie vector from the user-movie matrix
+Load the SVD and normalizer models
+Normalize and transform the movie vector using SVD
+Query the Annoy model
+Filter out the queried movie ID
+Map recommended movie IDs to TMDB IDs

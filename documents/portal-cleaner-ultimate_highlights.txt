@@ -1,0 +1,21 @@
+
+
+Portal Cleaner Ultimate
+
+Jun 2025 – Jul 2025
+
+Associated with PLATECH COATİNG
+
+Architected a modular desktop RPA suite (Python, Selenium, Tkinter) to automate complex ERP workflows, transforming manual data entry into scalable, fault-tolerant pipelines.
+
+Engineering Highlights & Impact:
+
+    Massive Efficiency Gain: Slashed daily operational workload by over 90%, reducing 4–6 hours of manual processing to under 30 minutes.
+
+    Test-Driven Reliability: Engineered a custom local mock ERP environment (Test Harness) to simulate dynamic UI states and intentionally inject server errors, enabling robust end-to-end offline testing.
+
+    Fault-Tolerant Architecture: Implemented dynamic retry logic, explicit waits, and centralized error logging to gracefully recover from unstable portal responses without interrupting the flow.
+
+    Concurrency & UI: Built a multi-threaded GUI architecture to ensure non-blocking responsiveness during heavy background data ingestion (parsing XML, XLSX, TXT files) and Selenium scraping tasks.
+
+    Modular Design: Separated reusable automation logic from UI and data processing, creating a highly maintainable and config-driven system.

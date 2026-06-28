@@ -1,0 +1,88 @@
+# Code Context: Portal Cleaner Ultimate
+
+=== File: app.py ===
+--- Class: class App(tk.Tk): ---
+  """Contains the Tkinter interface and the main application cycle.."""
+  def __init__(self)
+  def setup_ui(self)
+  def on_date_toggle(self)
+  def on_status_toggle(self)
+  def on_product_toggle(self)
+  def log(self, text: str)
+  def select_file(self)
+  def validate_date_inputs(self) -> tuple[bool, str]
+  def start_processing(self)
+  def run_processing(self)
+
+--- Inline Comments ---
+Local, modularized helpers
+
+=== File: config.py ===
+--- Class: class Config: ---
+  """Holds application configuration constants."""
+  def __post_init__(self)
+  def use_mock_urls(self) -> None:
+    """Switch the application back to the local mock site."""
+  def use_custom_urls(self, base_url: Optional[str] = None, start_url: Optional[str] = None) -> None:
+    """Apply explicit runtime URLs for production or custom environments."""
+
+--- Function: def env_flag(name: str) -> bool ---
+"""Read a boolean environment flag."""
+
+--- Inline Comments ---
+For local testing we point to the mock site. Change back for production.
+Global config instance; other modules import this
+
+=== File: debug_fetch.py ===
+--- Function: def debug() ---
+
+=== File: filters.py ===
+--- Class: class DateRangeFilter: ---
+  """Tarih girişi/parsing ve aralık kontrolü için yardımcı sınıf."""
+  def parse_date(date_str: str) -> Optional[date]
+  def parse_date_range(start_date_str: str, end_date_str: str) -> tuple[Optional[date], Optional[date]]
+  def is_date_in_range(order_date_str: str, start_date: Optional[date], end_date: Optional[date]) -> bool
+
+--- Class: class RowFilter: ---
+  """Satırların işlenip işlenmeyeceğini belirleyen basit filtreler."""
+  def should_process_row(row, tds: List, date_range: tuple = None, status_filter: str = None) -> bool
+
+=== File: io_utils.py ===
+--- Class: class FileProcessor: ---
+  """Helper methods for reading input files.
+
+Supported formats: .txt, .xlsx, .xls, .xml"""
+  def read_txt_file(file_path: str) -> List[str]
+  def read_xlsx_file(file_path: str) -> List[str]
+  def read_xls_file(file_path: str) -> List[str]
+  def read_xml_file(file_path: str) -> List[str]
+  def read_file(cls, file_path: str) -> List[str]
+
+--- Class: class ErrorLogger: ---
+  """Simple error logger that writes product codes to a file."""
+  def __init__(self, error_file: str = 'error_urunler.txt')
+  def log_error(self, product_code: str)
+
+=== File: run_full_flow.py ===
+--- Function: def run_full_scan() ---
+
+=== File: runtime.py ===
+--- Function: def build_parser() -> argparse.ArgumentParser ---
+
+--- Function: def apply_runtime_mode(config: Config, args: argparse.Namespace) -> None ---
+
+--- Function: def parse_runtime_args(argv: Optional[list[str]] = None) -> argparse.Namespace ---
+
+=== File: webdriver_manager.py ===
+--- Class: class WebDriverManager: ---
+  """Helper for WebDriver creation, navigation and page interactions."""
+  def __init__(self, config)
+  def create_driver(self)
+  def navigate_to_start_page(self)
+  def search_product(self, product_code: str) -> bool
+  def has_error_page(self) -> bool
+  def process_product_row(self, row, row_index: int, date_range: tuple = None, status_filter: str = None) -> bool
+  def process_product_page(self, work_order: str, row_index: int) -> bool
+
+--- Function: def get_chrome_options() -> Options ---
+"""Selenium için Chrome seçeneklerini yapılandırır."""

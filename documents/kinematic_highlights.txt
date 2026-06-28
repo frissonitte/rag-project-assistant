@@ -1,0 +1,13 @@
+Scalable Kinematic Action Recognition — Industry 5.0
+
+Apr 2026 – May 2026
+
+Associated with Sakarya University
+
+End-to-end ML pipeline on 10 GB motion-capture data (132 sensor channels, 15 action classes).
+
+Pipeline: Out-of-core ingestion with Dask → sliding-window feature extraction (528 features) → unsupervised clustering (MiniBatchKMeans + PCA + Hungarian matching) → supervised classification (RandomForest, Macro F1: 0.9995) → real-time streaming with ARF + ADWIN drift detection (81 windows/sec, 59 MB peak RAM).
+
+Kaggle competition variant: kinematic feature engineering (elbow joint angles, bilateral joint distances, rotation norms) + LightGBM/RandomForest soft-voting ensemble → 0.94169 private leaderboard accuracy.
+
+GitHub: github.com/frissonitte/kinematic-action-recognition

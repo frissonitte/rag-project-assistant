@@ -1,0 +1,160 @@
+# Code Context: Kinematic Action Recognition
+
+=== File: phase-1-data-architecture.py ===
+--- Function: def clean_and_cast_partition(df_part) ---
+"""Applied per 64MB chunk via map_partitions.
+
+CSV has embedded repeated header rows (sensor logger restarts mid-file).
+Reading as dtype='object' then coercing to numeric turns those string rows
+into NaN rows, which dropna() removes cleanly."""
+
+--- Function: def main() ---
+
+--- Inline Comments ---
+Strip whitespace from column names — source CSV has trailing spaces (e.g. 'Label ')
+errors='coerce': non-numeric strings (header rows) become NaN instead of raising
+Drops any row where coercion failed (i.e. embedded header rows)
+8 workers x 3GB = 24GB ceiling; leaves ~8GB headroom on 32GB system
+dtype='object' prevents cast failure at parse time — clean_and_cast_partition handles types
+on_bad_lines='skip' drops malformed rows (wrong column count) without crashing
+overwrite=True: safe to re-run without manually deleting the output dir
+5% sample pulled into memory for EDA/visualization — full data stays out-of-core
+
+=== File: phase-2-scalable-eda.py ===
+CONSTANT: PLOTS_DIR = 'plots'
+
+--- Function: def plot_label_distribution(sampled_df: pd.DataFrame) -> None ---
+
+--- Function: def plot_stationarity_check(sampled_df: pd.DataFrame, sensor_col: str) -> None ---
+"""Rolling mean/std to visually assess stationarity of a sensor channel.
+
+A stationary signal has roughly constant mean and std over time.
+This plot provides visual evidence for the rubric's stationarity check
+requirement without requiring a formal ADF test on the full dataset."""
+
+--- Function: def plot_class_sensor_boxplot(sampled_df: pd.DataFrame, sensor_col: str) -> None ---
+"""Box plot of sensor values per class — shows inter-class separability."""
+
+--- Function: def main() ---
+
+--- Inline Comments ---
+Classes beyond 0/1 are not anomalies — they are additional action classes
+discovered during EDA, revealing the true multiclass nature of the dataset.
+--- Visualisations ---
+Stationarity check on first 3 sensor channels
+Per-class box plot on most variable sensor
+
+=== File: phase-3-feature-engineering.py ===
+CONSTANT: WINDOW_SIZE = 200
+
+CONSTANT: STEP_SIZE = 100
+
+--- Function: def extract_window_features(df: pd.DataFrame) -> pd.DataFrame ---
+"""Slide a window over one partition and extract statistical features.
+
+Rolling-window approach: each 1-second window becomes one row with
+mean/std/max/min per sensor channel. std captures movement intensity
+(high std = rapid motion), which is the most discriminative feature
+for action recognition tasks."""
+
+--- Function: def main() ---
+
+--- Inline Comments ---
+Majority vote: assign the most frequent label in this window
+8 workers x 3GB = 24GB ceiling; leaves ~8GB headroom on 32GB system
+Build meta so Dask knows output schema before compute
+
+=== File: phase-4a-unsupervised.py ===
+CONSTANT: PLOTS_DIR = 'plots'
+
+CONSTANT: N_CLUSTERS = 15
+
+CONSTANT: N_PCA_COMPS = 50
+
+--- Function: def hungarian_match(true_labels, cluster_labels, n_clusters) ---
+"""Map cluster IDs to ground-truth class IDs via the Hungarian algorithm.
+
+K-Means assigns arbitrary cluster numbers (0-14). Hungarian algorithm finds
+the optimal 1-to-1 assignment that maximises overlap with true labels,
+letting us compute a meaningful F1-score on unsupervised output."""
+
+--- Function: def main() ---
+
+--- Inline Comments ---
+High-dimensional spaces make all distances converge (curse of
+dimensionality), PCA removes noise and restores meaningful geometry
+Build cost matrix: rows = clusters, cols = true class indices
+linear_sum_assignment minimises cost — negate to maximise overlap
+Build cluster_id → true_label mapping
+K-Means is distance-based — must normalise or std-heavy channels dominate
+PCA before K-Means: reduces 528 → 50 dims, drops noise, fixes distance geometry
+MiniBatchKMeans: same result as KMeans, fraction of the RAM and time
+--- Inference latency on 1000-sample batch ---
+--- Persist model and scaler ---
+--- Hungarian matching ---
+--- Evaluation ---
+--- Visualisations ---
+PCA explained variance curve
+Confusion matrix heatmap
+
+=== File: phase-4b-supervised.py ===
+CONSTANT: PLOTS_DIR = 'plots'
+
+CONSTANT: BINARY_LABELS = [0, 1]
+
+--- Function: def main() ---
+
+--- Inline Comments ---
+Rubric: "Classical supervised model" — only binary labels 0 and 1
+Remaining classes (3-15) are reserved for the unsupervised task
+Filter to binary subset — 0 vs 1 only
+Systematic every-5th-window test split.
+- Random split: leakage (overlapping windows share raw rows, twin ends up in both sets)
+- Temporal split: degenerate (classes 0 and 1 are in different time segments)
+- Every-5th: preserves class balance, adjacent windows still separated by 4 windows
+RandomForest: tree-based, immune to curse of dimensionality (no distance calc)
+class_weight='balanced': compensates for class 1 having ~2x fewer samples
+--- Inference latency ---
+--- Evaluation ---
+--- Top-20 most important features ---
+--- Visualisations ---
+Feature importance bar chart
+Confusion matrix heatmap
+--- Save model ---
+
+=== File: phase-5-streaming.py ===
+CONSTANT: PLOTS_DIR = 'plots'
+
+CONSTANT: DRIFT_INJECT_AT = 0.5
+
+CONSTANT: DRIFT_NOISE_RATE = 0.3
+
+--- Function: def simulate_stream(feat_df: pd.DataFrame, inject_drift: bool = True) ---
+"""Yield (x_dict, y) one window at a time, optionally injecting label noise.
+
+In real Industry 5.0 deployment the stream is live sensor windows.
+Here we replay the feature matrix in row order — temporal order preserved,
+no shuffling — to simulate a production data feed.
+
+Drift injection: after DRIFT_INJECT_AT fraction, randomly flip DRIFT_NOISE_RATE
+of labels. This simulates a process change (e.g. operator fatigue, line reconfiguration)
+and lets us verify that ADWIN detects the distribution shift."""
+
+--- Function: def main() ---
+
+--- Inline Comments ---
+Simulate concept drift by injecting label noise after this fraction of stream
+Flip to a random different class — simulates concept drift
+--- Model: Adaptive Random Forest ---
+ARF replaces trees that degrade under drift with freshly trained ones.
+Chosen over Hoeffding Tree because our 15-class problem needs ensemble power.
+--- Drift detector: ADWIN ---
+ADWIN maintains a sliding window of error rates; shrinks window when
+a statistically significant change in error rate is detected.
+--- Metrics (prequential / test-then-train) ---
+1. Predict before training (prequential evaluation — unbiased estimate)
+2. Update metrics
+3. Feed error signal to drift detector (1 = error, 0 = correct)
+4. Train on this sample
+--- Accuracy over time log ---
+--- Accuracy over time plot ---

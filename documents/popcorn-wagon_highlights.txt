@@ -1,0 +1,13 @@
+
+Popcorn Wagon: Scalable Hybrid Movie Recommender System
+
+Jan 2025 – May 2025
+
+Built a personalized movie recommendation platform combining content-based filtering (TMDB API) and collaborative filtering (MovieLens + SVD + Annoy). 
+Implemented a full-stack Flask application with user authentication, movie lists, tagging, and a responsive UI.
+
+Highlights:
+- Hybrid recommendation engine (SVD + Annoy + TMDB metadata)  
+- Scalable ETL pipelines using Pandas and Dask  
+- Millisecond-level similarity search with Spotify Annoy  
+- SQLAlchemy-based database design and session management

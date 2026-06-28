@@ -1,0 +1,24 @@
+
+
+
+Listing Pilot: C2C Marketplace Automation Suite
+
+Aug 2025 – Dec 2025
+
+Associated with zidorun
+
+Managing a high volume of active listings across multiple second-hand marketplaces (Dolap, Gardrops) requires hours of repetitive, manual effort every week. To solve this, I built Listing Pilot, an Appium-powered Android automation suite that operates entirely within native marketplace apps to automate bulk price updates, listing refreshes, and description modifications.
+
+Key Technical Highlights:
+
+    Modular Architecture: Designed a highly scalable, config-driven core engine. Platform-specific UI selectors and Appium capabilities are isolated in JSON profiles, allowing the core logic to remain platform-agnostic.
+
+    Advanced UI Interaction: Built custom algorithms for spatial element matching (pairing product titles to prices using pixel coordinate proximity) and dynamic overlap detection (preventing taps on obscured elements).
+
+    Fault-Tolerance: Implemented robust execution flows with dynamic retry handling, multi-ID element fallbacks, and adaptive swipe logic to handle unstable UI states gracefully.
+
+    Real-time Monitoring: Integrated the Telegram Bot API to deliver real-time completion notifications and error alerts directly to mobile devices.
+
+Impact: Successfully automated the management of ~1,000 active listings, reducing the daily manual workload by over 90% and ensuring consistent, error-free catalog updates.
+
+

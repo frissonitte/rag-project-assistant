@@ -1,0 +1,444 @@
+# Code Context: Listing Pilot
+
+=== File: dolap_core.py ===
+--- Module Docstring ---
+dolap_core.py
+~~~~~~~~~~~~~
+Core automation engine for Dolap marketplace.
+
+Manages an Appium-controlled Android session and exposes a single entry point
+`run_marketplace_bot` that iterates over the seller's product list and applies
+the configured operation (price drop, price fix, price increment, or listing
+refresh / description update).
+
+All platform-specific selectors and Appium capabilities are loaded from
+``automation_targets.private.json`` via :mod:`target_profiles`, so the core
+logic stays platform-agnostic.
+
+CONSTANT: TARGET_PROFILE = load_target_profile('mobile_market_primary')
+
+CONSTANT: TARGET_APPIUM = TARGET_PROFILE['appium']
+
+CONSTANT: TARGET_SELECTORS = TARGET_PROFILE['selectors']
+
+CONSTANT: TARGET_TEXTS = TARGET_PROFILE['texts']
+
+CONSTANT: TARGET_LOGGING = TARGET_PROFILE['logging']
+
+CONSTANT: PRODUCT_TITLE_IDS = tuple(TARGET_SELECTORS['product_title_ids'])
+
+CONSTANT: PRODUCT_LIST_READY_IDS = tuple(TARGET_SELECTORS['product_list_ready_ids'])
+
+CONSTANT: STICKY_BUTTONS_ID = TARGET_SELECTORS['sticky_buttons_id']
+
+CONSTANT: EARNING_PRICE_XPATH = TARGET_SELECTORS['earning_price_xpath']
+
+CONSTANT: EARNING_PRICE_SUBMIT_XPATH = TARGET_SELECTORS['earning_price_submit_xpath']
+
+CONSTANT: BOTTOM_NAV_PRODUCTS_ID = TARGET_SELECTORS['bottom_nav_products_id']
+
+CONSTANT: FILTER_BUTTON_ID = TARGET_SELECTORS['filter_button_id']
+
+CONSTANT: SORT_AREA_ID = TARGET_SELECTORS['sort_area_id']
+
+CONSTANT: DESCRIPTION_INPUT_ID = TARGET_SELECTORS['description_input_id']
+
+CONSTANT: PRICE_INPUT_ID = TARGET_SELECTORS['price_input_id']
+
+CONSTANT: APPROVAL_BUTTON_ID = TARGET_SELECTORS['approval_button_id']
+
+CONSTANT: SORT_LOWEST_PRICE_XPATH = TARGET_SELECTORS['sort_lowest_price_xpath']
+
+CONSTANT: PRODUCTS_TAB_TEXT = TARGET_TEXTS['products_tab']
+
+--- Class: class MarketplaceBotConfig: ---
+  """Immutable configuration for a single bot run.
+
+All fields have sensible defaults; override only what you need in each
+runner script (e.g. ``dolap_price_drop.py``)."""
+
+--- Function: def setup_logging(log_file: str) -> None ---
+"""Configure root logger to write to *log_file* and stdout.
+
+Idempotent — calling more than once has no effect."""
+
+--- Function: def _tap_xy(driver, x: int, y: int, duration_ms: int = 250) -> None ---
+"""Tap the screen at absolute pixel coordinates (*x*, *y*).
+
+Tries the W3C Actions ``clickGesture`` first; falls back to the legacy
+``driver.tap`` API so the code works with both old and new Appium versions."""
+
+--- Function: def _press_back(driver) -> None ---
+"""Send the Android hardware Back key (keycode 4)."""
+
+--- Function: def _press_enter(driver) -> None ---
+"""Send the Android Enter / Done key (keycode 66)."""
+
+--- Function: def _element_text(element) -> str ---
+"""Return the visible text of *element*, preferring ``text`` over ``content-desc``."""
+
+--- Function: def _element_center(element) -> tuple[int, int] ---
+"""Return the (x, y) pixel coordinates of the centre of *element*."""
+
+--- Function: def _click_element(driver, element) -> None ---
+"""Click *element*, falling back to a coordinate tap if ``element.click()`` fails."""
+
+--- Function: def _click_xpath(driver, wait: WebDriverWait, xpath: str) -> None ---
+"""Wait for *xpath* to become clickable, then click it."""
+
+--- Function: def _swipe_up(driver, duration_ms: int = 450, percent: float = 0.75) -> None ---
+"""Scroll the product list upward (i.e. reveal items further down the list).
+
+Uses the W3C ``swipeGesture`` first; falls back to ``driver.swipe``.
+*percent* controls how far the swipe travels relative to the swipeable area."""
+
+--- Function: def _point_in_rect(x: int, y: int, rect: dict, margin: int = 0) -> bool ---
+"""Return True if pixel (*x*, *y*) lies inside *rect* (with optional *margin*)."""
+
+--- Function: def _get_sticky_buttons_rect(driver) ---
+"""Return the bounding rect of the sticky action bar, or None if absent."""
+
+--- Function: def _is_element_blocked_by_sticky(driver, element, margin: int = 12) -> bool ---
+"""Return True if the centre of *element* is obscured by the sticky button bar."""
+
+--- Function: def _pair_titles_with_prices(driver, title_elements, price_elements) ---
+"""Pair each visible product title element with its closest price element.
+
+Matching is spatial: for every title the algorithm searches for the price
+element whose centre lies within 220 px below and 180 px horizontally of
+the title centre, minimising (delta_x, delta_y).  Each price element can
+only be matched once.
+
+Returns a list of dicts with keys:
+  ``title_element``, ``title_text``, ``price_element``, ``blocked_by_sticky``."""
+
+--- Function: def _find_elements_with_fallback(driver, resource_ids: tuple[str, ...]) ---
+"""Try each resource ID in *resource_ids* and return the first non-empty result."""
+
+--- Function: def _wait_for_elements_with_fallback(driver, resource_ids: tuple[str, ...], timeout_s: int) ---
+"""Poll until at least one element matching any ID in *resource_ids* appears.
+
+Raises :class:`~selenium.common.exceptions.TimeoutException` if none appear
+within *timeout_s* seconds."""
+
+--- Function: def _is_products_page_open(driver) -> bool ---
+"""Return True if the product list screen is currently visible."""
+
+--- Function: def _create_driver(cfg: MarketplaceBotConfig) ---
+"""Start an Appium remote session using *cfg* and return ``(driver, wait)``."""
+
+--- Function: def _go_to_products_page(driver, wait: WebDriverWait) -> None ---
+"""Navigate to the seller's product list screen."""
+
+--- Function: def _close_filter_menu(driver, wait: WebDriverWait, sleep_after_s: float) -> None ---
+"""Open then immediately dismiss the filter panel.
+
+This is used as a workaround to force the app to reload the product list
+in the correct default sort order after navigating to the screen."""
+
+--- Function: def _apply_sort_lowest_price(wait: WebDriverWait) -> None ---
+"""Open the sort menu and select 'Lowest Price' ordering."""
+
+--- Function: def _scroll_forward(driver) -> None ---
+"""Scroll the product list forward by one page.
+
+Prefers ``UiScrollable.scrollForward()`` for reliability; falls back to a
+manual swipe gesture if that fails."""
+
+--- Function: def _update_description_if_enabled(cfg: MarketplaceBotConfig, wait: WebDriverWait, driver) -> None ---
+"""Replace *cfg.description_old_text* with *cfg.description_new_text* in the
+open listing's description field.  Does nothing if the flag is disabled or
+the target text is not found."""
+
+--- Function: def _calculate_fixed_price(current_price: int) -> int ---
+"""Round *current_price* up to the next price tier.
+
+Tiers: 80 → 120 → 160 → 200 → 249.  Prices already on or above a tier
+are returned unchanged."""
+
+--- Function: def _calculate_increment_price(current_price: int, increment_amount: int) -> int ---
+"""Add *increment_amount* to *current_price*, capping at 249 when the
+starting price is below 249.
+
+This prevents accidentally pushing a budget listing above the 249 threshold
+in a single automated pass."""
+
+--- Function: def send_telegram_alert(message: str) -> None ---
+"""Send *message* to the configured Telegram chat.
+
+Reads ``TELEGRAM_BOT_TOKEN`` and ``TELEGRAM_CHAT_ID`` from the environment
+(via ``.env``).  Silently no-ops when either variable is missing."""
+
+--- Function: def run_marketplace_bot(cfg: MarketplaceBotConfig) -> None ---
+"""Run the automation loop according to *cfg*.
+
+The loop:
+1. Opens the product list.
+2. Iterates over visible products, processing each unseen one.
+3. Scrolls forward when all visible products have been processed.
+4. Stops after ``cfg.max_scrolls_without_new_items`` consecutive scrolls
+   that yield no new products.
+
+Depending on which flags are set in *cfg*, each product is either:
+- **Price-drop / fix / increment mode** (``enable_price_drop=True``):
+  taps the inline price element and updates it directly from the list view.
+- **Listing refresh mode** (default): enters the listing detail, optionally
+  updates the description, then re-submits the listing for approval — which
+  refreshes its position in search results."""
+
+--- Inline Comments ---
+---------------------------------------------------------------------------
+Load target profile & unpack selector / capability constants
+---------------------------------------------------------------------------
+---------------------------------------------------------------------------
+Bot configuration
+---------------------------------------------------------------------------
+Timing
+Coordinates used to tap the "Edit" button inside a listing detail view.
+Adjust these to match your device's screen resolution.
+Optional coordinates of the back-arrow that returns to the product list.
+When None, the hardware back key is used instead.
+Operation flags — at most one price mode should be True at a time.
+Tokens used for find-and-replace in description update mode.
+---------------------------------------------------------------------------
+Logging setup
+---------------------------------------------------------------------------
+---------------------------------------------------------------------------
+Low-level Appium helpers
+---------------------------------------------------------------------------
+---------------------------------------------------------------------------
+Sticky-button overlap detection
+---------------------------------------------------------------------------
+---------------------------------------------------------------------------
+Title ↔ price pairing
+---------------------------------------------------------------------------
+---------------------------------------------------------------------------
+Element lookup helpers with multi-ID fallback
+---------------------------------------------------------------------------
+---------------------------------------------------------------------------
+Appium driver factory
+---------------------------------------------------------------------------
+---------------------------------------------------------------------------
+Navigation helpers
+---------------------------------------------------------------------------
+---------------------------------------------------------------------------
+Listing-level operations
+---------------------------------------------------------------------------
+---------------------------------------------------------------------------
+Price calculation helpers
+---------------------------------------------------------------------------
+Hard cap: if the current price is below 249, the result must not exceed 249.
+---------------------------------------------------------------------------
+Telegram alert helper
+---------------------------------------------------------------------------
+---------------------------------------------------------------------------
+Main bot loop
+---------------------------------------------------------------------------
+In price-drop mode the filter/sort step is intentionally skipped so
+that listings appear in the default order (most recently active first).
+----------------------------------------------------------------
+Collect visible elements for this screen
+----------------------------------------------------------------
+----------------------------------------------------------------
+Process each visible product
+----------------------------------------------------------------
+--------------------------------------------------------
+Price-drop / fix / increment mode
+Operates directly from the list view without entering
+the listing detail screen.
+--------------------------------------------------------
+Strip currency symbols and non-digit characters
+before parsing (e.g. "119 ₺" → 119).
+Wait for the price-edit pop-up to close before
+re-scanning the list (the DOM changes on dismiss).
+Close any open overlay before continuing.
+--------------------------------------------------------
+Listing refresh mode
+Enters the listing detail and re-submits for approval,
+optionally updating the description first.
+--------------------------------------------------------
+---------------------------------------------------------------------------
+Backwards-compatible aliases (used by runner scripts)
+---------------------------------------------------------------------------
+
+=== File: dolap_description_change.py ===
+--- Module Docstring ---
+dolap_description_change.py
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Runner: iterate over every listing and replace a fixed substring in its
+description, then re-submit for approval.
+
+Edit ``description_old_text`` / ``description_new_text`` before running.
+
+Usage::
+
+    python dolap_description_change.py
+
+--- Function: def main() -> None ---
+
+=== File: dolap_price_drop.py ===
+--- Module Docstring ---
+dolap_price_drop.py
+~~~~~~~~~~~~~~~~~~~
+Runner: decrease every listing price by ``price_drop_amount`` (default: 1 TL).
+
+Usage::
+
+    python dolap_price_drop.py
+
+--- Function: def main() -> None ---
+
+=== File: dolap_price_fix.py ===
+--- Module Docstring ---
+dolap_price_fix.py
+~~~~~~~~~~~~~~~~~~
+Runner: snap every listing price up to the next defined price tier.
+
+Tiers are defined in ``_calculate_fixed_price`` inside ``dolap_core.py``::
+
+    < 80  → 80
+    < 120 → 120
+    < 160 → 160
+    < 200 → 200
+    < 249 → 249
+
+Usage::
+
+    python dolap_price_fix.py
+
+--- Function: def main() -> None ---
+
+=== File: dolap_price_increment.py ===
+--- Module Docstring ---
+dolap_price_increment.py
+~~~~~~~~~~~~~~~~~~~~~~~~
+Runner: raise every listing price by ``price_increment_amount`` TL.
+
+Listings currently priced below 249 TL will not be pushed above that threshold
+in a single pass (see ``_calculate_increment_price`` in ``dolap_core.py``).
+
+Usage::
+
+    python dolap_price_increment.py
+
+--- Function: def main() -> None ---
+
+=== File: gardrops_price.py ===
+--- Module Docstring ---
+gardrops_price.py
+~~~~~~~~~~~~~~~~~
+Standalone price-update bot for the Gardrops Android marketplace app.
+
+Unlike the Dolap bot (which loads selector config from an external JSON file),
+this script hard-codes Gardrops-specific resource IDs directly.  This is
+intentional: Gardrops has fewer screens to automate and the selectors rarely
+change.
+
+Modes (set ``MODE`` constant below):
+  ``"map"``        — look up each price in ``PRICE_MAP`` and apply the mapped value.
+  ``"drop"``       — subtract ``PRICE_DROP_AMOUNT`` from every price.
+  ``"increment"``  — add ``PRICE_INCREMENT_AMOUNT`` to every price
+                     (capped at 249 when starting below 249).
+
+Usage::
+
+    python gardrops_price.py
+
+CONSTANT: MODE = 'map'
+
+CONSTANT: PRICE_MAP: dict[int, int] = {67: 82, 100: 115, 135: 150, 167: 182, 170: 185, 192: 207, 200: 215, 230: 250}
+
+CONSTANT: PRICE_DROP_AMOUNT = 1
+
+CONSTANT: PRICE_INCREMENT_AMOUNT = 1
+
+CONSTANT: MAX_SCROLLS_WITHOUT_NEW_ITEMS = 10
+
+CONSTANT: INCREMENT_CAP_FROM_BELOW_249 = 249
+
+CONSTANT: MIN_ALLOWED_PRICE = 0
+
+--- Function: def send_telegram_alert(message: str) -> None ---
+"""Send *message* to the configured Telegram chat (no-op if env vars absent)."""
+
+--- Function: def create_driver_and_wait() -> tuple[webdriver.Remote, WebDriverWait] ---
+"""Start an Appium session targeting the Gardrops app and return ``(driver, wait)``."""
+
+--- Function: def clean_price(price_text: str) -> int ---
+"""Parse an integer price from a display string (e.g. ``"₺ 135"`` → ``135``)."""
+
+--- Function: def swipe_up(driver, duration: int = 1000) -> None ---
+"""Swipe from 80 % to 30 % of screen height to scroll the product list forward."""
+
+--- Function: def calculate_new_target_price(current_price: int) -> int | None ---
+"""Return the target price for *current_price* according to the active ``MODE``.
+
+Returns ``None`` when the price should not change (map mode with no entry).
+Raises ``ValueError`` for an unrecognised mode value."""
+
+--- Function: def update_product_price(driver, wait: WebDriverWait, product, current_price: int, target_price: int) -> None ---
+"""Open *product*, navigate to its edit screen, and write *target_price*.
+
+Navigates: product card → detail → edit → price field → save → publish.
+Presses Back twice at the end to return to the product list."""
+
+--- Function: def run_bot() -> None ---
+"""Run the Gardrops price-update loop.
+
+Navigate to the seller's product list manually before the 5-second
+countdown completes — the bot does not auto-navigate to the list screen."""
+
+--- Inline Comments ---
+---------------------------------------------------------------------------
+Configuration
+---------------------------------------------------------------------------
+Active mode — one of: "map", "drop", "increment"
+Used only when MODE == "map".
+Keys are current prices; values are target prices.
+---------------------------------------------------------------------------
+Logging
+---------------------------------------------------------------------------
+---------------------------------------------------------------------------
+Telegram helper
+---------------------------------------------------------------------------
+---------------------------------------------------------------------------
+Appium session
+---------------------------------------------------------------------------
+---------------------------------------------------------------------------
+Helpers
+---------------------------------------------------------------------------
+Cap at 249 when the starting price is below that threshold.
+---------------------------------------------------------------------------
+Listing update
+---------------------------------------------------------------------------
+Locate the price chip that displays the current price.
+Wait for the listing detail to re-render after publish.
+---------------------------------------------------------------------------
+Main bot loop
+---------------------------------------------------------------------------
+
+=== File: target_profiles.py ===
+--- Module Docstring ---
+target_profiles.py
+~~~~~~~~~~~~~~~~~~
+Loads automation target profiles from ``automation_targets.private.json``.
+
+The private JSON file is **not** committed to version control (it is listed in
+``.gitignore``).  Copy ``automation_targets.example.json`` to
+``automation_targets.private.json`` and fill in your own selectors before
+running any bot script.
+
+CONSTANT: BASE_DIR = Path(__file__).resolve().parent
+
+CONSTANT: PRIVATE_TARGETS_PATH = BASE_DIR / 'automation_targets.private.json'
+
+--- Function: def _load_targets() -> dict ---
+"""Read and cache the private targets JSON file.
+
+Raises :class:`FileNotFoundError` when the file does not exist — which
+usually means the user forgot to copy the example file."""
+
+--- Function: def load_target_profile(profile_key: str) -> dict ---
+"""Return the profile dict for *profile_key*.
+
+Raises :class:`KeyError` when the key does not exist in the targets file."""

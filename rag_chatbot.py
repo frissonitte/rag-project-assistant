@@ -107,51 +107,14 @@ def init_rag(verbose=False) -> dict:
         if verbose: console.print(f"[red]Error loading SentenceTransformer: {e}[/red]")
         sys.exit(1)
 
-    all_chunks, sources, projects = load_documents()
-    
-    if not all_chunks:
-        if verbose: console.print("[red]No document chunks found to index![/red]")
-        sys.exit(1)
-
     try:
-        if PERSISTENT_DB:
-            client = chromadb.PersistentClient(path=CHROMA_DB_PATH)
-            collection = client.get_or_create_collection(COLLECTION_NAME)
-            
-            if collection.count() == 0:
-                for i, chunk in enumerate(all_chunks):
-                    embedding = model.encode(chunk).tolist()
-                    metadata = {"source": sources[i], "project": projects[i]}
-                    collection.add(ids=[str(i)], embeddings=[embedding], documents=[chunk], metadatas=[metadata])
-            else:
-                indexed_sources = set()
-                try:
-                    results = collection.get(include=["metadatas"])
-                    if results and "metadatas" in results:
-                        indexed_sources = {m["source"] for m in results["metadatas"] if m and "source" in m}
-                except Exception:
-                    pass
-                
-                current_sources = set(sources)
-                new_files = current_sources - indexed_sources
-                
-                if new_files:
-                    try: client.delete_collection(COLLECTION_NAME)
-                    except Exception: pass
-                    collection = client.create_collection(COLLECTION_NAME)
-                    for i, chunk in enumerate(all_chunks):
-                        embedding = model.encode(chunk).tolist()
-                        metadata = {"source": sources[i], "project": projects[i]}
-                        collection.add(ids=[str(i)], embeddings=[embedding], documents=[chunk], metadatas=[metadata])
-        else:
-            client = chromadb.Client()
-            collection = client.create_collection(COLLECTION_NAME)
-            for i, chunk in enumerate(all_chunks):
-                embedding = model.encode(chunk).tolist()
-                metadata = {"source": sources[i]}
-                collection.add(ids=[str(i)], embeddings=[embedding], documents=[chunk], metadatas=[metadata])
+        client = chromadb.PersistentClient(path=CHROMA_DB_PATH)
+        collection = client.get_or_create_collection(COLLECTION_NAME)
+        if collection.count() == 0:
+            if verbose: console.print("[red]ChromaDB index is empty. Run 'python build_index.py' first.[/red]")
+            sys.exit(1)
     except Exception as e:
-        if verbose: console.print(f"[red]Error initializing ChromaDB: {e}[/red]")
+        if verbose: console.print(f"[red]Error connecting to ChromaDB: {e}[/red]")
         sys.exit(1)
 
     return {

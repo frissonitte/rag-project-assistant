@@ -8,7 +8,8 @@ pinned: false
 short_description: RAG (Retrieval-Augmented Generation) system that answers que
 ---
 
-![RAG pipeline illustration](static/thumbnail.png)
+![RAG pipeline illustration](https://github-production-user-asset-6210df.s3.amazonaws.com/119807029/614266694-16851bcf-1fb4-4b12-90a5-3d564329f510.png?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=AKIAVCODYLSA53PQK4ZA%2F20260628%2Fus-east-1%2Fs3%2Faws4_request&X-Amz-Date=20260628T154713Z&X-Amz-Expires=300&X-Amz-Signature=65a4e5c0594c3afdc1ca59d51d7423e09b2129b41dba5c37d2f9c1b386dceda9&X-Amz-SignedHeaders=host&response-content-type=image%2Fpng)
+
 _Conceptual illustration — see [Demo](#demo) below for the actual terminal interface._
 
 # frissonitte's rag project assistant
@@ -28,7 +29,7 @@ A local RAG (Retrieval-Augmented Generation) chatbot for querying personal proje
 
 ## Demo
 
-![Actual terminal interface](static/interface.png)
+![Actual terminal interface](https://github-production-user-asset-6210df.s3.amazonaws.com/119807029/614266695-10a2f2c1-90a4-4d99-adb0-16c8d46ff5f5.png?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=AKIAVCODYLSA53PQK4ZA%2F20260628%2Fus-east-1%2Fs3%2Faws4_request&X-Amz-Date=20260628T154754Z&X-Amz-Expires=300&X-Amz-Signature=44b616bb5c91be2969f3fa662e089384b7adfa68c965e482486d63e3008c2fcb&X-Amz-SignedHeaders=host&response-content-type=image%2Fpng)
 _Real terminal output: retrieved chunks with similarity scores, project filtering, and grounded answer generation._
 
 ## Architecture

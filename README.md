@@ -1,3 +1,13 @@
+---
+title: Rag Project Assistant
+emoji: 🔥
+colorFrom: red
+colorTo: red
+sdk: docker
+pinned: false
+short_description: RAG (Retrieval-Augmented Generation) system that answers que
+---
+
 ![RAG pipeline illustration](static/thumbnail.png)
 _Conceptual illustration — see [Demo](#demo) below for the actual terminal interface._
 

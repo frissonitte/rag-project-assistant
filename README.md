@@ -16,7 +16,7 @@ _Conceptual illustration — see [Demo](#demo) below for the actual terminal int
 
 A local RAG (Retrieval-Augmented Generation) chatbot for querying personal project documentation. Built to replace hallucination-prone LLM responses with grounded answers extracted from actual project source code and documentation.
 
-**Current state:** FastAPI backend with Groq inference (Llama 3.3 70B). CLI mode still available locally. Planned deployment as a public-facing web service — see [Roadmap](#roadmap).
+**Current state:** Fully deployed. FastAPI backend on Hugging Face Spaces (Docker), Groq inference (Llama 3.3 70B), IP-based rate limiting, and a vanilla JS chat widget embedded at [emirhanyildirim.me](https://emirhanyildirim.me). CLI mode still available locally.
 
 ## Roadmap
 
@@ -24,8 +24,8 @@ A local RAG (Retrieval-Augmented Generation) chatbot for querying personal proje
 - [x] Expose `/chat` POST endpoint via FastAPI
 - [x] Add IP-based rate limiting (`slowapi`)
 - [x] Deploy backend to Hugging Face Spaces (Docker SDK)
-- [ ] Build vanilla JS chat widget for portfolio site integration
-- [ ] Embed widget into [emirhanyildirim.me](https://emirhanyildirim.me) (Jekyll / GitHub Pages)
+- [x] Build vanilla JS chat widget for portfolio site integration
+- [x] Embed widget into [emirhanyildirim.me](https://emirhanyildirim.me) (Jekyll / GitHub Pages)
 
 ## Demo
 
@@ -41,15 +41,19 @@ documents/               ← prepared knowledge base
     └── *_highlights.txt ← curated project summaries & rationale
 
 prepare_docs.py          ← knowledge base builder
-rag_chatbot.py           ← retrieval + generation pipeline
+build_index.py           ← builds ChromaDB index (run at Docker build time)
+rag_chatbot.py           ← retrieval + generation core (shared by CLI and API)
+app.py                   ← FastAPI service (POST /query, rate limiting)
 chroma_db/               ← persistent vector index
+Dockerfile               ← multi-stage build, pre-builds index, exposes :7860
 ```
 
 **Pipeline:**
 
 1. `prepare_docs.py` extracts structured context from each project
-2. Chunks are embedded with `all-MiniLM-L6-v2` and stored in ChromaDB
+2. `build_index.py` embeds chunks with `all-MiniLM-L6-v2` and stores in ChromaDB (runs at Docker build time)
 3. At query time: project keyword detection → metadata-filtered retrieval → Groq generation with strict grounding prompt
+4. Response includes `answer`, `sources` (list of source files), and `low_confidence` flag
 
 ## Document Extraction (`prepare_docs.py`)
 
@@ -108,7 +112,9 @@ Two source types with different roles:
 
 **Keyword-based project detection:** Project filtering relies on a static keyword list. Misspelled project names or paraphrased references are not caught. A more robust approach would use semantic similarity against project name embeddings, but the current approach is sufficient for the intended use case.
 
-**Cloud inference dependency:** Generation requires a valid `GROQ_API_KEY`. If the Groq API is unreachable, the endpoint returns an error string rather than a structured fallback.
+**Cloud inference dependency:** Generation requires a valid `GROQ_API_KEY`. If the Groq API is unreachable, the endpoint returns 503.
+
+**Rate limiting:** The public API is limited to 3 requests per hour per IP via `slowapi`. Intended for the portfolio widget use case — not suitable for bulk querying.
 
 ## Setup
 
@@ -119,8 +125,11 @@ pip install -r requirements.txt
 cp .env.example .env
 # Edit .env and add your GROQ_API_KEY
 
-# Build knowledge base
+# Build knowledge base (run once, or when projects change)
 python prepare_docs.py
+
+# Build ChromaDB index
+python build_index.py
 
 # Start CLI chatbot
 python rag_chatbot.py
@@ -130,6 +139,27 @@ fastapi dev app.py
 ```
 
 **LLM:** Groq API with `llama-3.3-70b-versatile`. Requires `GROQ_API_KEY` in `.env`.
+
+## API
+
+**Live endpoint:** `https://frissonitte-rag-project-assistant.hf.space/query`
+
+```bash
+curl -X POST https://frissonitte-rag-project-assistant.hf.space/query \
+  -H "Content-Type: application/json" \
+  -d '{"query": "What is WBC Analyzer?"}'
+```
+
+**Response:**
+```json
+{
+  "answer": "...",
+  "sources": ["wbc-analyzer_README.md"],
+  "low_confidence": false
+}
+```
+
+Rate limit: 3 requests/hour per IP.
 
 ## Commands
 
